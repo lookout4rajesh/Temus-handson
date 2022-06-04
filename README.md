@@ -1,92 +1,117 @@
-# Temus-handson
+# Deploying a Spring Boot project as WAR on tomcat
 
-temus-handson
+This is an example of how to package and deploy a Spring Boot project as WAR on Tomcat.
 
-## Getting started
+By default, this project can be run as an executable jar file deployable to Spring Boot's embedded tomcat.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+In order to package it as an executable war file, we have to do the following changes:
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+First Download Apache Maven 3 and set the M2_HOME
 
-## Add your files
+Then we create a standard Spring Boot web project:
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+https://github.com/ManfredWind/deploying-spring-boot-as-war-on-tomcat/commit/02c0732e930f2b92c5aafb57646b1b987e9a92a8
+
+- Change Packaging type in pom.xml from jar to war
+
+- Add dependency spring-boot-starter-tomcat and set the scope as provided. This is necessary to omit embedded tomcat in order to avoid conflict.
+
+- In your @SpringBootApplication configuration class, extend the SpringBootServletInitializer class to override the configure(SpringApplicationBuilder application) method. This is necessary to make it an executable war file.
+
+From docs: https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/web/support/SpringBootServletInitializer.html
+
+"An opinionated WebApplicationInitializer to run a SpringApplication from a traditional WAR deployment. Binds Servlet, Filter and ServletContextInitializer beans from the application context to the servlet container."
+
+Now you can create a controller to test the web application and use maven to package the war file with the command:
+
+- mvn clean package
+
+Once the war file has been successfully generated (compiled and built) you can deploy it to tomcat.
+
+
+## Deploying to Tomcat
+
+All changes:
+
+https://github.com/ManfredWind/deploying-spring-boot-as-war-on-tomcat/tree/deploy-to-tomcat
+
+Download Apache Tomcat 9
+
+There are a numerous ways to deploy locally to Tomcat (copy/paste, ANT script, custom shell script, IDE, maven plugin, etc. )
+
+The easiest would be with your IDE by just adding Tomcat as a "Server" and then right click project -> "Run as" - > "Run on Server"
+
+My favorite is the maven-tomcat-plugin which gladly still works for Tomcat 9. It let's me externalize my tomcat and run it as a separate service instead of using the IDE for it.
+
+
+All we need to do is the following:
+
+- Change your settings.xml in your .m2 directory (if not present, then create one).
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/rajesh56/temus-handson.git
-git branch -M main
-git push -uf origin main
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                      https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <localRepository>${user.home}/.m2/repository</localRepository>
+
+<!-- add these config -->
+   <servers>
+        <server>
+                <id>localtomcat</id>
+                <username>user</username>
+                <password>password</password>
+        </server>
+   </servers>
+
+</settings>
 ```
 
-## Integrate with your tools
+- Add the following lines add the end of your tomcat-users.xml located in your tomcat's conf directory:
 
-- [ ] [Set up project integrations](https://gitlab.com/rajesh56/temus-handson/-/settings/integrations)
+```
+  <!-- Add these lines at the bottom -->
+  <role rolename="manager"/>
+  <user username="user" password="password" roles="manager"/>
 
-## Collaborate with your team
+</tomcat-users>
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+- Add the plugin to your project's pom.xml:
 
-## Test and Deploy
+```
+<build>
+  <finalName>example</finalName>
+  <plugins>
+    <plugin>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-maven-plugin</artifactId>
+    </plugin>
+        <plugin>
+          <groupId>org.apache.tomcat.maven</groupId>
+          <artifactId>tomcat7-maven-plugin</artifactId>
+          <version>2.2</version>
+      <configuration>
+         <url>http://localhost:8080/manager/text</url>
+         <server>localtomcat</server>
+         <path>/example</path>
+       </configuration>
+        </plugin>
+  </plugins>
+</build>
+```
 
-Use the built-in continuous integration in GitLab.
+- Start your tomcat
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+- Execute maven command for your project:  mvn clean tomcat7:redeploy
 
-***
+- Go to http://localhost:8080/example
 
-# Editing this README
+- Verify your controller output
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!).  Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+VOILA!
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
 
-## Name
-Choose a self-explaining name for your project.
+More info at Spring docs:
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-create-a-deployable-war-file
