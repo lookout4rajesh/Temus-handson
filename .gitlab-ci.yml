@@ -43,12 +43,12 @@ deploy-job:      # This job runs in the deploy stage.
     - tomcat
   script:
     before_script:
-  - 'command -v ssh-agent >/dev/null || ( apk add --update openssh )' 
-  - eval $(ssh-agent -s)
-  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-  - mkdir -p ~/.ssh
-  - chmod 700 ~/.ssh
-  - ssh-keyscan $EC2_IPADDRESS >> ~/.ssh/known_hosts
-  - chmod 644 ~/.ssh/known_hosts
+      - 'command -v ssh-agent >/dev/null || ( apk add --update openssh )' 
+      - eval $(ssh-agent -s)
+      - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+      - mkdir -p ~/.ssh
+      - chmod 700 ~/.ssh
+      - ssh-keyscan $EC2_IPADDRESS >> ~/.ssh/known_hosts
+      - chmod 644 ~/.ssh/known_hosts
   script:
     - scp -o StrictHostKeyChecking=no /home/gitlab-runner/builds/tomcat/target/Temus-handson.war ubuntu@3.110.118.70:/opt/tomcat/webapps
